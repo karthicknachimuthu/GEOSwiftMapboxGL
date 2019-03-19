@@ -24,13 +24,13 @@ extension Geometry : GEOSwiftMapboxGL {
             
         case is Waypoint:
             let pointAnno = MGLPointAnnotation()
-            pointAnno.coordinate = CLLocationCoordinate2DFromCoordinate((self as! Waypoint).coordinate)
+            pointAnno.coordinate = CLLocationCoordinate2D((self as! Waypoint).coordinate)
             return pointAnno
             
         case is LineString:
             var coordinates = (self as! LineString).points.map({ (point: Coordinate) ->
                 CLLocationCoordinate2D in
-                return CLLocationCoordinate2DFromCoordinate(point)
+                return CLLocationCoordinate2D(point)
             })
             let polyline = MGLPolyline(coordinates: &coordinates,
                 count: UInt(coordinates.count))
@@ -39,7 +39,7 @@ extension Geometry : GEOSwiftMapboxGL {
         case is Polygon:
             var exteriorRingCoordinates = (self as! Polygon).exteriorRing.points.map({ (point: Coordinate) ->
                 CLLocationCoordinate2D in
-                return CLLocationCoordinate2DFromCoordinate(point)
+                return CLLocationCoordinate2D(point)
             })
             
             // interior rings are not handled by MapBoxGL, we must drop this info!
@@ -50,13 +50,7 @@ extension Geometry : GEOSwiftMapboxGL {
             
             let polygon = MGLPolygon(coordinates: &exteriorRingCoordinates, count: UInt(exteriorRingCoordinates.count) /*, interiorPolygons: interiorRings*/)
             return polygon
-                                     
-        case is MultiPolygon<Polygon>:
-          let mglPolygons = (self as! MultiPolygon).geometries.map({ (polygon: Polygon) -> MGLPolygon in
-            return polygon.mapboxShape() as! MGLPolygon
-          })
-          return MGLMultiPolygon(polygons: mglPolygons) 
-                                     
+            
         default:
             let geometryCollectionOverlay = MGLShapesCollection(geometryCollection: (self as! GeometryCollection))
             return geometryCollectionOverlay
@@ -67,7 +61,7 @@ extension Geometry : GEOSwiftMapboxGL {
 private func MGLPolygonWithCoordinatesSequence(coordinates: CoordinatesCollection) -> MGLPolygon {
     var coordinates = coordinates.map({ (point: Coordinate) ->
         CLLocationCoordinate2D in
-        return CLLocationCoordinate2DFromCoordinate(point)
+        return CLLocationCoordinate2D(point)
     })
     return MGLPolygon(coordinates: &coordinates,
         count: UInt(coordinates.count))
@@ -91,19 +85,13 @@ public class MGLShapesCollection : MGLShape, MGLOverlay {
             MGLShape in
             return geometry.mapboxShape()
         })
-
-        if let coordinate = geometryCollection.centroid()?.coordinate {
-            self.centroid = CLLocationCoordinate2DFromCoordinate(coordinate)
-        } else {
-            self.centroid = CLLocationCoordinate2DFromCoordinate(CoordinateFromCLLocationCoordinate2D(CLLocationCoordinate2DMake(0, 0)))
-        }
-
+        self.centroid = CLLocationCoordinate2D((geometryCollection.centroid()?.coordinate)!)
         self.shapes = shapes
         
         if let envelope = geometryCollection.envelope() as? Polygon {
             let exteriorRing = envelope.exteriorRing
-            let sw = CLLocationCoordinate2DFromCoordinate(exteriorRing.points[0])
-            let ne = CLLocationCoordinate2DFromCoordinate(exteriorRing.points[2])
+            let sw = CLLocationCoordinate2D(exteriorRing.points[0])
+            let ne = CLLocationCoordinate2D(exteriorRing.points[2])
             self.overlayBounds = MGLCoordinateBounds(sw:sw, ne:ne)
         } else {
             let zeroCoord = CLLocationCoordinate2DMake(0, 0)
@@ -125,4 +113,5 @@ public class MGLShapesCollection : MGLShape, MGLOverlay {
     public func intersects(_ overlayBounds: MGLCoordinateBounds) -> Bool {
         return true
     }
+
 }
